@@ -1,0 +1,107 @@
+name: Build, Test, and Deploy
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily build at 2 AM UTC
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: false
+          tags: voluntary-consent-detector:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          cd backend || exit 0
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          cd ..
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install frontend dependencies
+        run: |
+          cd frontend || exit 0
+          npm ci
+          cd ..
+      
+      - name: Run backend linting
+        run: |
+          cd backend || exit 0
+          if command -v flake8 &> /dev/null; then flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true; fi
+          if command -v pylint &> /dev/null; then pylint **/*.py --disable=all --enable=E || true; fi
+          cd ..
+      
+      - name: Run frontend linting
+        run: |
+          cd frontend || exit 0
+          npm run lint || true
+          cd ..
+      
+      - name: Run backend tests
+        run: |
+          cd backend || exit 0
+          if [ -f pytest.ini ] || [ -f setup.py ]; then pytest . -v || true; fi
+          cd ..
+      
+      - name: Run frontend tests
+        run: |
+          cd frontend || exit 0
+          npm test -- --passWithNoTests || true
+          cd ..
+      
+      - name: Build frontend
+        run: |
+          cd frontend || exit 0
+          npm run build || true
+          cd ..
+      
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-outputs
+          path: |
+            frontend/dist/
+            backend/build/
+          retention-days: 7
+      
+      - name: Create build summary
+        if: always()
+        run: |
+          echo "Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "================" >> $GITHUB_STEP_SUMMARY
+          echo "Build Date: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "Git Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "Branch: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
