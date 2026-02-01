@@ -68,41 +68,48 @@ voluntary-consent-detector/
 ## Technology Stack
 
 ### Backend
+
 - FastAPI (Python 3.11)
 - Uvicorn ASGI server
 - Pydantic for validation
 - Cryptography for RSA operations
+- PostgreSQL for data persistence
+- SQLAlchemy ORM
 
 ### Frontend
+
 - React 18+ with TypeScript
 - TensorFlow.js for ML inference
 - WebRTC for media capture
 - Web Crypto API for signing
 
 ### Infrastructure
+
 - Docker & Docker Compose
 - GitHub Actions (CI/CD)
 
 ## Development
 
 1. **Frontend setup**:
-   ```bash
-   cd frontend
-   npm install
-   npm start
-   ```
+
+```bash
+cd frontend
+npm install
+npm start
+```
 
 2. **Backend setup**:
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   python -m uvicorn app.main:app --reload
-   ```
+
+```bash
+cd backend
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload
+```
 
 ## Important Notes
 
 - Add TensorFlow.js models to `frontend/public/models/emotion/`
-- Replace in-memory backend store with PostgreSQL for production
+- PostgreSQL backend fully integrated for production
 - Customize legal notices and consent flows per jurisdiction
 - Implement proper authentication and rate-limiting before production
 - Store encryption keys securely in KMS/vault
@@ -119,12 +126,12 @@ Private repository - All rights reserved
 
 ## Status
 
-🚀 **Project Status**: MVP Scaffold Ready for Development
+🚀 **Project Status**: Sprint 4 - Core Infrastructure Complete
 
 - [x] Repository created
 - [x] Project scaffold generated
+- [x] PostgreSQL backend setup
+- [x] Consent UI implementation
 - [ ] TensorFlow.js models integrated
-- [ ] PostgreSQL backend setup
-- [ ] Consent UI implementation
 - [ ] Docker deployment testing
 - [ ] Production deployment
