@@ -132,5 +132,5 @@ Private repository - All rights reserved
 - [x] PostgreSQL backend setup
 - [x] Consent UI implementation
 - [x] TensorFlow.js models integrated
-- [ x Docker deployment testing
-- [ x Production deployment
+- [x] Docker deployment testing
+- [x] Production deployment
