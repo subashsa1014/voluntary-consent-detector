@@ -35,7 +35,7 @@ ENV PATH=/root/.local/bin:$PATH \
 RUN useradd -m -u 1000 appuser
 
 # Copy application code
-# Copy application codeCOPY . /app/
+COPY . /app/
 
 # Change to non-root user
 USER appuser
