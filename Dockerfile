@@ -16,15 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy and install Python dependencies
 # Create empty requirements.txt if backend/requirements.txt doesn't exist
 RUN touch requirements.tx
-RUN pip install --user --no-cache-dir --no-deps -r requirements.txt || echo "No dependencies installed"
+RUN pip install --no-cache-dir -r requirements.txt || true
 # Production stage
 FROM python:3.10-slim
 
 # Set working directory
 WORKDIR /app
 
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
 
 # Set environment variables
 ENV PATH=/root/.local/bin:$PATH \
