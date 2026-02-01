@@ -35,8 +35,7 @@ ENV PATH=/root/.local/bin:$PATH \
 RUN useradd -m -u 1000 appuser
 
 # Copy application code
-CO#py application code (create empty dirs if source doesn't exist)
-COPY . /app/
+# Copy application codeCOPY . /app/
 
 # Change to non-root user
 USER appuser
