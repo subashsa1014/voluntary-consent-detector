@@ -1,0 +1,32 @@
+name: Publish Packages
+
+on:
+  release:
+    types: [created, published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        registry-url: 'https://npm.pkg.github.com'
+    
+    - name: Install dependencies (Frontend)
+      working-directory: ./frontend
+      run: npm ci
+    
+    - name: Build (Frontend)
+      working-directory: ./frontend
+      run: npm run build
+    
+    - name: Publish to GitHub Packages (Frontend)
+      working-directory: ./frontend
+      run: npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
