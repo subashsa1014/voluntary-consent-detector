@@ -14,8 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install Python dependencies
-COPY backend/requirements.txt . 2>/dev/null || echo "No requirements.txt"
-RUN pip install --user --no-cache-dir --no-deps -r requirements.txt 2>/dev/null || echo "Dependencies skipped"
+COPY backend/requirements.txt . 2>/dev/null || echo "No requirements.txt" || true
+RUN pip install --user --no-cache-dir --no-deps -r requirements.txt 2>/dev/null || echo "Dependencies skipped" || true
 
 # Production stage
 FROM python:3.10-slim
@@ -35,10 +35,10 @@ ENV PATH=/root/.local/bin:$PATH \
 RUN useradd -m -u 1000 appuser
 
 # Copy application code
-COPY backend/ /app/backend/ 2>/dev/null || echo "No backend"
-COPY frontend/ /app/frontend/ 2>/dev/null || echo "No frontend"
-COPY docker-compose.yml . 2>/dev/null || echo "No docker-compose.yml"
-COPY .env.example . 2>/dev/null || echo "No .env.example"
+COPY backend/ /app/backend/ 2>/dev/null || echo "No backend" || true
+COPY frontend/ /app/frontend/ 2>/dev/null || echo "No frontend" || true
+COPY docker-compose.yml . 2>/dev/null || echo "No docker-compose.yml" || true
+COPY .env.example . 2>/dev/null || echo "No .env.example" || true
 
 # Change to non-root user
 USER appuser
