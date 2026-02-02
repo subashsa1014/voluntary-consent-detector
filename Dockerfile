@@ -9,6 +9,7 @@ WORKDIR /app
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    
     gcc \
     git \
     && rm -rf /var/lib/apt/lists/*
@@ -21,8 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt || true
 FROM python:3.10-slim
 
 # Set working directory
-WORKDIR /app
-
+WORKDIR /app/backend
 
 # Set environment variables
 ENV PATH=/root/.local/bin:$PATH \
@@ -43,4 +43,4 @@ EXPOSE 8000
 EXPOSE 3000
 
 # Default command
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
