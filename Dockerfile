@@ -43,4 +43,4 @@ EXPOSE 8000
 EXPOSE 3000
 
 # Default command
-CMD ["python", "-c", "print('Voluntary Consent Detector container started. To run: python backend/manage.py runserver 0.0.0.0:8000')"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "backend.wsgi:application"]
