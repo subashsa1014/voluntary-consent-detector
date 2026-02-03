@@ -32,7 +32,10 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Create all tables on startup
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Database initialization failed: {e}. Continuing without database.")
 
 # Dependency to get DB session
 def get_db():
