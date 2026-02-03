@@ -1,7 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import Capture from './Capture';
-import { encryptConsent, generateHash, signConsent, checkDPDPACompliance } from '../utils/crypto';
-import { modelService } from '../utils/tfjsModels';
+import {
+  encryptConsent,
+  generateHash,
+  generateKeyPair,
+  signConsent,
+  checkDPDPACompliance
+} from '../utils/crypto';
 
 interface ConsentScreenProps {
   documentType: string;
@@ -10,7 +15,7 @@ interface ConsentScreenProps {
   onCancel: () => void;
 }
 
-interface ConsentData {
+export interface ConsentData {
   userId: string;
   documentType: string;
   detectedEmotion: string;
@@ -30,40 +35,12 @@ const ConsentScreen: React.FC<ConsentScreenProps> = ({
 }) => {
   const [currentEmotion, setCurrentEmotion] = useState<string>('neutral');
   const [emotionConfidence, setEmotionConfidence] = useState<number>(0);
-  const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [isModelReady, setIsModelReady] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Initialize TensorFlow.js models
-  useEffect(() => {
-    const loadModels = async () => {
-      try {
-        await modelService.initialize();
-        setIsModelReady(true);
-      } catch (err) {
-        setError('Failed to load AI models. Please ensure you have a stable internet connection.');
-        console.error(err);
-      }
-    };
-    loadModels();
-
-    return () => {
-      modelService.dispose();
-    };
-  }, []);
-
-  const handleCapture = async (videoElement: HTMLVideoElement) => {
-    if (!isModelReady) return;
-
-    try {
-      const result = await modelService.detectEmotion(videoElement);
-      setCurrentEmotion(result.emotion);
-      setEmotionConfidence(result.confidence);
-    } catch (err) {
-      console.error('Emotion detection error:', err);
-    }
+  const handleEmotionDetected = (emotion: string, confidence: number) => {
+    setCurrentEmotion(emotion);
+    setEmotionConfidence(confidence);
   };
 
   const handleConsentSubmit = async (agreed: boolean) => {
@@ -82,20 +59,25 @@ const ConsentScreen: React.FC<ConsentScreenProps> = ({
       emotionConfidence,
       userConsent: agreed,
       consentTimestamp: timestamp,
-      jurisdiction
+      jurisdiction,
+      dataUsagePurpose: 'Document registration verification',
+      dataRetentionPeriod: '7 years',
+      rightToWithdraw: true
     };
 
     // 1. Check compliance
-    const isCompliant = checkDPDPACompliance(rawData);
-    if (!isCompliant && jurisdiction === 'India') {
-      setError('Consent does not meet DPDPA requirements.');
+    const compliance = checkDPDPACompliance(rawData);
+    if (!compliance.compliant && jurisdiction === 'India') {
+      setError(`Consent does not meet DPDPA requirements: ${compliance.issues.join(', ')}`);
       return;
     }
 
     // 2. Encrypt and Sign
-    const encryptedData = encryptConsent(JSON.stringify(rawData));
-    const dataHash = generateHash(encryptedData);
-    const digitalSignature = signConsent(dataHash);
+    const { privateKey } = await generateKeyPair();
+    const encryptionKey = `CONSENT_KEY_${userId}`;
+    const encryptedData = await encryptConsent(JSON.stringify(rawData), encryptionKey);
+    const dataHash = await generateHash(encryptedData);
+    const digitalSignature = await signConsent(dataHash, privateKey);
 
     const finalData: ConsentData = {
       ...rawData,
@@ -108,7 +90,7 @@ const ConsentScreen: React.FC<ConsentScreenProps> = ({
 
   if (error) {
     return (
-      <div className=\"error-container\">
+      <div className="error-container">
         <h2>Error</h2>
         <p>{error}</p>
         <button onClick={() => window.location.reload()}>Retry</button>
@@ -117,50 +99,50 @@ const ConsentScreen: React.FC<ConsentScreenProps> = ({
   }
 
   return (
-    <div className=\"consent-screen\">
+    <div className="consent-screen">
       <h1>Voluntary Consent Verification</h1>
       <p>Project: <strong>{documentType}</strong></p>
       
-      {!isModelReady ? (
-        <div className=\"loading-models\">
-          <p>Loading AI models for secure verification...</p>
-        </div>
-      ) : (
-        <div className=\"capture-section\">
-          <Capture 
-            onFrame={handleCapture}
-            active={isCapturing}
-          />
-          
-          <div className=\"status-overlay\">
-            <p>Detected Emotion: <strong>{currentEmotion}</strong></p>
-            <p>Confidence: <strong>{(emotionConfidence * 100).toFixed(2)}%</strong></p>
+      <div className="capture-section">
+        {!isModelReady && (
+          <div className="loading-models">
+            <p>Loading AI models for secure verification...</p>
           </div>
-
-          <div className=\"consent-controls\">
-            <p>Do you voluntarily consent to the registration of this document?</p>
-            <button 
-              className=\"btn-approve\"
-              onClick={() => handleConsentSubmit(true)}
-              disabled={emotionConfidence < 0.6} // Requirement: 60% confidence
-            >
-              I Consent
-            </button>
-            <button 
-              className=\"btn-decline\"
-              onClick={() => handleConsentSubmit(false)}
-            >
-              Decline
-            </button>
-          </div>
+        )}
+        <Capture
+          onEmotionDetected={handleEmotionDetected}
+          onModelReady={setIsModelReady}
+          onError={(message) => setError(message)}
+        />
+        
+        <div className="status-overlay">
+          <p>Detected Emotion: <strong>{currentEmotion}</strong></p>
+          <p>Confidence: <strong>{(emotionConfidence * 100).toFixed(2)}%</strong></p>
         </div>
-      )}
 
-      <div className=\"legal-footer\">
+        <div className="consent-controls">
+          <p>Do you voluntarily consent to the registration of this document?</p>
+          <button 
+            className="btn-approve"
+            onClick={() => handleConsentSubmit(true)}
+            disabled={emotionConfidence < 0.6 || !isModelReady} // Requirement: 60% confidence
+          >
+            I Consent
+          </button>
+          <button 
+            className="btn-decline"
+            onClick={() => handleConsentSubmit(false)}
+          >
+            Decline
+          </button>
+        </div>
+      </div>
+
+      <div className="legal-footer">
         <p>This process is compliant with the Digital Personal Data Protection Act (DPDPA) 2023.</p>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .consent-screen {
           max-width: 800px;
           margin: 0 auto;
@@ -176,6 +158,14 @@ const ConsentScreen: React.FC<ConsentScreenProps> = ({
           background: #fff;
           border: 1px solid #e5e7eb;
           border-radius: 8px;
+        }
+        .loading-models {
+          padding: 0.75rem;
+          background: #eef2ff;
+          border-radius: 8px;
+          margin-bottom: 1rem;
+          color: #4338ca;
+          font-weight: 500;
         }
         .btn-approve {
           background: #10b981;

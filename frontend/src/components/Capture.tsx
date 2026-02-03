@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { loadModel, detectEmotion } from '../utils/model';
+import { modelService } from '../utils/tfjsModels';
 
 interface CaptureProps {
   onEmotionDetected: (emotion: string, confidence: number) => void;
+  onModelReady?: (ready: boolean) => void;
   onError?: (error: string) => void;
 }
 
-const Capture: React.FC<CaptureProps> = ({ onEmotionDetected, onError }) => {
+const Capture: React.FC<CaptureProps> = ({ onEmotionDetected, onModelReady, onError }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -15,11 +16,13 @@ const Capture: React.FC<CaptureProps> = ({ onEmotionDetected, onError }) => {
 
   // Initialize video stream
   useEffect(() => {
+    let activeStream: MediaStream | null = null;
     const initializeVideo = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480 }
         });
+        activeStream = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -32,10 +35,7 @@ const Capture: React.FC<CaptureProps> = ({ onEmotionDetected, onError }) => {
     initializeVideo();
 
     return () => {
-      if (videoRef.current?.srcObject) {
-        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-        tracks.forEach(track => track.stop());
-      }
+      activeStream?.getTracks().forEach(track => track.stop());
     };
   }, [onError]);
 
@@ -43,8 +43,9 @@ const Capture: React.FC<CaptureProps> = ({ onEmotionDetected, onError }) => {
   useEffect(() => {
     const loadEmotionModel = async () => {
       try {
-        await loadModel();
+        await modelService.initialize();
         setModelLoaded(true);
+        onModelReady?.(true);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Failed to load model';
         onError?.(errorMsg);
@@ -52,14 +53,17 @@ const Capture: React.FC<CaptureProps> = ({ onEmotionDetected, onError }) => {
     };
 
     loadEmotionModel();
-  }, [onError]);
+    return () => {
+      modelService.dispose();
+    };
+  }, [onError, onModelReady]);
 
   // Detect emotion from video
   const detectEmotionFrame = async () => {
     if (!videoRef.current || !modelLoaded || !isCapturing) return;
 
     try {
-      const result = await detectEmotion(videoRef.current);
+      const result = await modelService.detectEmotion(videoRef.current);
       onEmotionDetected(result.emotion, result.confidence);
     } catch (error) {
       console.error('Emotion detection error:', error);
@@ -117,7 +121,7 @@ const Capture: React.FC<CaptureProps> = ({ onEmotionDetected, onError }) => {
         </span>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .capture-container {
           display: flex;
           flex-direction: column;

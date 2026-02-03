@@ -101,7 +101,7 @@ export function anonymizePII(data: string): string {
 export function checkDPDPACompliance(consentData: any): { compliant: boolean; issues: string[] } {
   const issues: string[] = [];
 
-  if (!consentData.timestamp) issues.push('Missing timestamp');
+  if (!consentData.consentTimestamp) issues.push('Missing timestamp');
   if (!consentData.userConsent) issues.push('Missing explicit user consent');
   if (!consentData.dataUsagePurpose) issues.push('Missing data usage purpose');
   if (!consentData.dataRetentionPeriod) issues.push('Missing data retention period');
@@ -113,7 +113,7 @@ export function checkDPDPACompliance(consentData: any): { compliant: boolean; is
   };
 }
 
-export default {
+const cryptoUtils = {
   generateKeyPair,
   encryptConsent,
   decryptConsent,
@@ -123,3 +123,5 @@ export default {
   anonymizePII,
   checkDPDPACompliance
 };
+
+export default cryptoUtils;
