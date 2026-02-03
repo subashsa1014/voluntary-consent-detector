@@ -11,8 +11,7 @@ python-dotenv==1.0.0
 python-jose==3.3.0
 python-multipart==0.0.6
 bcrypt==4.1.1
-pillicon==10.0.1
-requests==2.31.0
+pillow==10.0.1requests==2.31.0
 aiofiles==23.2.1
 cors==1.0.1
 fastapi-cors==0.0.6
