@@ -1,6 +1,5 @@
 # Production-ready Dockerfile for Voluntary Consent Detector
 # Simplified multi-stage build with Python backend
-
 FROM python:3.10-slim as builder
 
 # Set working directory
@@ -9,15 +8,14 @@ WORKDIR /app
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    
     gcc \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
-# Create empty requirements.txt if backend/requirements.txt doesn't exist
-RUN touch requirements.tx
-RUN pip install --no-cache-dir -r requirements.txt || true
+# Copy requirements file and install Python dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
 # Production stage
 FROM python:3.10-slim
 
